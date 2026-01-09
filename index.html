@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="om">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forex Master Planner & Journal</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a237e">
+
+<style>
+:root{
+--p-color:#1a237e;--s-color:#ffd600;
+--g-color:#27ae60;--r-color:#e74c3c;
+--buy:#3498db;--sell:#e67e22;
+--bg:#f0f2f5;--card:#ffffff;--txt:#000;
+}
+.dark{
+--bg:#0f172a;--card:#1e293b;--txt:#fff;
+}
+body{
+font-family:'Segoe UI',sans-serif;
+background:var(--bg);color:var(--txt);
+margin:0;display:flex;justify-content:center;
+}
+.container{
+width:100%;max-width:480px;
+background:var(--card);min-height:100vh;
+box-shadow:0 0 20px rgba(0,0,0,0.1);
+}
+.header{
+background:var(--p-color);color:white;
+padding:25px;text-align:center;
+border-radius:0 0 20px 20px;
+}
+.progress-container{
+width:90%;background:rgba(255,255,255,0.2);
+height:10px;border-radius:5px;margin:15px auto;
+}
+#progress-bar{height:100%;background:var(--s-color);width:0%;transition: 0.3s;}
+.clock-box{
+background:var(--s-color);padding:15px;
+font-size:2rem;font-weight:bold;
+text-align:center;margin:-20px auto 20px;
+border-radius:10px;width:80%;
+color:var(--p-color);
+}
+button{
+padding:10px;border:none;border-radius:8px;
+cursor:pointer;font-weight:bold;
+}
+.alarm-btn{background:var(--g-color);color:white;width:90%;margin:10px 5%;}
+.mode-btn{background:#444;color:white;width:90%;margin:10px 5%;}
+.task{display:flex;padding:15px;border-bottom:1px solid #eee; align-items: center;}
+.task.done{opacity:.5;background:#e8f5e9;}
+.journal-section{padding:20px;}
+.form-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+input,select,textarea{
+padding:10px;border-radius:5px;border:1px solid #ccc; background: var(--card); color: var(--txt);
+}
+.btn-save{grid-column:span 2;background:var(--p-color);color:white;}
+.win{color:var(--g-color)} .loss{color:var(--r-color)}
+.stat{display:flex;justify-content:space-between;margin:5px 0}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h2>Karoora Barumsa & Galmee</h2>
+<p id="date"></p>
+<div class="progress-container"><div id="progress-bar"></div></div>
+<button onclick="resetAll()" style="background:var(--r-color); color:white;">Hunda Haqi</button>
+</div>
+
+<button class="mode-btn" onclick="toggleMode()">🌗 Dark / Light</button>
+
+<div class="clock-box" id="clock">00:00:00</div>
+<button onclick="enableAudio()" class="alarm-btn">ALAARMIIN BANII 🔔</button>
+
+<div id="tasksList"></div>
+
+<div class="journal-section">
+<h3>📓 Trading Journal (Auto-Backup)</h3>
+<div class="form-box">
+<input id="pair" placeholder="PAIR (e.g. EURUSD)">
+<select id="type"><option>BUY</option><option>SELL</option></select>
+<input id="rr" placeholder="RR (1:2)">
+<select id="res"><option value="WIN">WIN</option><option value="LOSS">LOSS</option></select>
+<textarea id="note" placeholder="Reason/Note" style="grid-column:span 2"></textarea>
+<button class="btn-save" onclick="saveJournal()">SAVE TRADE</button>
+</div>
+
+<h3>📊 Win-Rate Stats</h3>
+<div class="stat"><span>Total Trades</span><span id="totalT">0</span></div>
+<div class="stat win"><span>Wins</span><span id="winsCount">0</span></div>
+<div class="stat loss"><span>Losses</span><span id="lossesCount">0</span></div>
+<div class="stat"><b>Win-Rate</b><b id="winrate">0%</b></div>
+</div>
+
+</div>
+
+<script>
+// ===== DARK / LIGHT MODE =====
+if(localStorage.mode==="dark") document.body.classList.add("dark");
+function toggleMode(){
+  document.body.classList.toggle("dark");
+  localStorage.mode=document.body.classList.contains("dark")?"dark":"light";
+}
+
+// ===== CLOCK =====
+setInterval(()=> {
+  const now = new Date();
+  document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: true });
+}, 1000);
+
+// ===== TASKS =====
+const schedule=[
+  {id:1,time:"06:00 AM",label:"Ka'uu & Meditation"},
+  {id:2,time:"08:00 AM",label:"Barumsa & Backtest"},
+  {id:3,time:"10:00 AM",label:"London Session Analysis"},
+  {id:4,time:"02:00 PM",label:"NY Session Trading"}
+];
+
+let completed=JSON.parse(localStorage.forexDone||"[]");
+
+function renderTasks(){
+  const tasksDiv = document.getElementById('tasksList');
+  tasksDiv.innerHTML=schedule.map((t)=>`
+    <div class="task ${completed.includes(t.id)?"done":""}">
+      <input type="checkbox" ${completed.includes(t.id)?"checked":""} 
+      onclick="toggleTask(${t.id})" style="margin-right:10px"> 
+      <span>${t.time} - ${t.label}</span>
+    </div>`).join("");
+  document.getElementById('progress-bar').style.width=(completed.length/schedule.length)*100+"%";
+}
+
+function toggleTask(id){
+  completed=completed.includes(id)?completed.filter(x=>x!==id):[...completed,id];
+  localStorage.forexDone=JSON.stringify(completed);
+  renderTasks();
+}
+
+// ===== ALARM =====
+let audioOn=false;
+function enableAudio(){ audioOn=true; alert("Alarmiin banameera!"); }
+
+setInterval(()=>{
+  if(!audioOn) return;
+  const now = new Date();
+  const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  schedule.forEach(s=>{ 
+    if(currentTime === s.time) {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      audio.play();
+      alert("⏰ Yeroo: " + s.label);
+    }
+  });
+}, 60000);
+
+// ===== JOURNAL & STATS =====
+let journals=JSON.parse(localStorage.forexJournal||"[]");
+
+function saveJournal(){
+  const j={
+    pair: document.getElementById('pair').value,
+    type: document.getElementById('type').value,
+    rr: document.getElementById('rr').value,
+    res: document.getElementById('res').value,
+    date: new Date().toLocaleDateString()
+  };
+  if(!j.pair) return alert("Maaloo Pair guuti!");
+  journals.unshift(j);
+  localStorage.forexJournal=JSON.stringify(journals);
+  calcStats();
+  // Clear inputs
+  document.getElementById('pair').value = "";
+}
+
+function calcStats(){
+  const wins = journals.filter(j=>j.res==="WIN").length;
+  const losses = journals.filter(j=>j.res==="LOSS").length;
+  document.getElementById('totalT').innerText = journals.length;
+  document.getElementById('winsCount').innerText = wins;
+  document.getElementById('lossesCount').innerText = losses;
+  document.getElementById('winrate').innerText = journals.length ? 
+    Math.round((wins/journals.length)*100)+"%" : "0%";
+}
+
+function resetAll(){
+  if(confirm("Hunda haquu barbaaddu?")){
+    localStorage.clear();
+    location.reload();
+  }
+}
+
+// ===== SERVICE WORKER REGISTRATION =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered!"));
+  });
+}
+
+// INIT
+document.getElementById('date').innerText = new Date().toDateString();
+renderTasks();
+calcStats();
+</script>
+</body>
+</html>
+
+{
+  "name": "Forex Master Planner",
+  "short_name": "ForexApp",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1a237e",
+  "icons": [
+    { "src": "https://cdn-icons-png.flaticon.com/512/2535/2535153.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "https://cdn-icons-png.flaticon.com/512/2535/2535153.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+
+const cacheName = "forex-v1";
+const assets = ["./", "./index.html", "./manifest.json"];
+
+self.addEventListener("install", e => {
+  e.waitUntil(caches.open(cacheName).then(c => c.addAll(assets)));
+});
+
+self.addEventListener("fetch", e => {
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+});
